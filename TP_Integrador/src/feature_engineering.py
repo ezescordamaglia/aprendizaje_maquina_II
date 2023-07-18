@@ -48,9 +48,6 @@ class FeatureEngineeringPipeline:
 
         # print(df_transformed.head())
 
-        # FEATURES ENGINEERING: nueva columna para marcar registros de entrenamiento
-        df_transformed['Set'] = 'train'
-
         # FEATURES ENGINEERING: para los años del establecimiento
         # Cálculo de años de vida de la tienda en base al año de establecimiento
         # y el año actual (se asume que es data del actual año 2020)
@@ -147,6 +144,9 @@ class FeatureEngineeringPipeline:
 
         # FEATURES ENGINEERING: Codificación de variables nominales
         df_transformed = pd.get_dummies(df_transformed, columns=['Outlet_Type'], dtype=int)
+
+        # FEATURES ENGINEERING: Eliminacion de columnas
+        df_transformed = df_transformed.drop(columns=['Item_Identifier', 'Outlet_Identifier'])
 
         return df_transformed
 
