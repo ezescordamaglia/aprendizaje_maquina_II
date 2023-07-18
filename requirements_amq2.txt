@@ -13,3 +13,5 @@ shap==0.41.0
 uvicorn==0.22.0
 optuna==2.10.0
 seaborn
+pytest
+statsmodels
