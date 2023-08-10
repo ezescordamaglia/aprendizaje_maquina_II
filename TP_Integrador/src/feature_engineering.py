@@ -10,7 +10,9 @@ AUTOR: Ezequiel Scordamaglia y Santiago González Achaval
 FECHA: 17/07/2023
 """
 
+import argparse
 import pandas as pd
+import numpy as np
 
 class FeatureEngineeringPipeline:
     """
@@ -148,6 +150,18 @@ class FeatureEngineeringPipeline:
         # FEATURES ENGINEERING: Eliminacion de columnas
         df_transformed = df_transformed.drop(columns=['Item_Identifier', 'Outlet_Identifier'])
 
+        # Mover al final la columna de Item_Outlet_Sales
+        if 'Item_Outlet_Sales' in df_transformed.columns:
+            # Mover columna al final
+            cols = list(df_transformed.columns)
+            cols.remove('Item_Outlet_Sales')
+            cols.append('Item_Outlet_Sales')
+            df_transformed = df_transformed[cols]
+
+        # Agregar columna de Item_Outlet_Sales si no existe
+        if 'Item_Outlet_Sales' not in df_transformed.columns:
+            df_transformed['Item_Outlet_Sales'] = np.nan
+
         return df_transformed
 
     def write_prepared_data(self, transformed_dataframe: pd.DataFrame) -> None:
@@ -158,7 +172,7 @@ class FeatureEngineeringPipeline:
         :param transformed_dataframe: DataFrame de pandas transformado.
         """
 
-        transformed_dataframe.to_csv(self.output_path, index=False, sep=';')
+        transformed_dataframe.to_csv(self.output_path, index=False, sep=',')
 
     def run(self):
         """
@@ -171,7 +185,19 @@ class FeatureEngineeringPipeline:
         self.write_prepared_data(df_transformed)
 
 if __name__ == "__main__":
-    FeatureEngineeringPipeline(input_path = r"..\data\Train_BigMart.csv",
-                                output_path =
-                                r"..\data\Transformed\Train_BigMart_Prepared.csv") \
-                                .run()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('modo', type=str, help='Modo de ejecución: train o test')
+    args = parser.parse_args()
+
+    modo = args.modo
+
+    if modo == 'train':
+        IN_PATH = r"..\data\Train_BigMart.csv"
+        OUT_PATH = r"..\data\Transformed\Train_BigMart_Prepared.csv"
+    else:
+        IN_PATH = r"..\data\Test_BigMart.csv"
+        OUT_PATH = r"..\data\Transformed\Test_BigMart_Prepared.csv"
+
+    FeatureEngineeringPipeline(input_path = IN_PATH,
+                                output_path = OUT_PATH).run()

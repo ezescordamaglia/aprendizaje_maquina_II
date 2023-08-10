@@ -29,19 +29,17 @@ class ModelTrainingPipeline:
         self.model_path = model_path
 
     def read_data(self) -> pd.DataFrame:
-
         """
         Leer los datos del DataLake y retornarlos como un DataFrame.
 
         :return: El DataFrame con los datos del DataLake.
         :rtype: pd.DataFrame
         """
-        df_bigmart = pd.read_csv(self.input_path,sep=";")
+        df_bigmart = pd.read_csv(self.input_path,sep=",")
 
         return df_bigmart
 
     def model_training(self, df_bigmart: pd.DataFrame) -> pd.DataFrame:
-
         """
         Entrenar el modelo usando linear regression.
         Usamos el dataset entero al no precisar de validacion en este punto.
@@ -62,7 +60,6 @@ class ModelTrainingPipeline:
         return model_trained
 
     def model_dump(self, model_trained) -> None:
-
         """
         Guarda el modelo entrenado en un archivo o ubicación específica.
 
@@ -91,7 +88,7 @@ if __name__ == "__main__":
                            "..", 
                            "data","Transformed",
                            "Train_BigMart_Prepared.csv")
-    mod_path = os.path.join(current_directory, "..", "model.pkl")
+    mod_path = os.path.join(current_directory, "..", "model", "model.pkl")
 
     ModelTrainingPipeline(input_path = in_path,
                            model_path = mod_path).run()
