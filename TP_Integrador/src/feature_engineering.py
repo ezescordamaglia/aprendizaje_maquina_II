@@ -11,8 +11,16 @@ FECHA: 17/07/2023
 """
 
 import argparse
+import logging as log
 import pandas as pd
 import numpy as np
+
+log.basicConfig(
+    filename='./feat_ing.log',
+    level=log.INFO,
+    filemode='w',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 class FeatureEngineeringPipeline:
     """
@@ -31,8 +39,12 @@ class FeatureEngineeringPipeline:
         :return pandas_df: DataFrame de pandas con los datos de entrada.
         :rtype: pd.DataFrame
         """
-        pandas_df = pd.read_csv(self.input_path)
-
+        try:
+            log.info("Iniciando la lectura de datos desde %s", self.input_path)
+            pandas_df = pd.read_csv(self.input_path)
+            log.info("Datos leídos: Filas=%d, Columnas=%d", pandas_df.shape[0], pandas_df.shape[1])
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
+            log.info("Error %s al importar dataframe", e_lectura)
         return pandas_df
 
     def data_transformation(self, df_raw: pd.DataFrame) -> pd.DataFrame:
@@ -53,13 +65,16 @@ class FeatureEngineeringPipeline:
         # FEATURES ENGINEERING: para los años del establecimiento
         # Cálculo de años de vida de la tienda en base al año de establecimiento
         # y el año actual (se asume que es data del actual año 2020)
+        log.info("Aplicando transformación de años de vida de la tienda")
         df_transformed['Outlet_Establishment_Year'] = 2020 - \
             df_transformed['Outlet_Establishment_Year']
 
+        log.info("Unificando etiquetas para 'Item_Fat_Content")
         # LIMPIEZA: Unificando etiquetas para 'Item_Fat_Content'
         df_transformed['Item_Fat_Content'] = df_transformed['Item_Fat_Content'].replace(
             {'low fat':  'Low Fat', 'LF': 'Low Fat', 'reg': 'Regular'})
 
+        log.info("Limpieza de faltantes en el peso de los productos")
         # LIMPIEZA: de faltantes en el peso de los productos
         productos = list(df_transformed[
             df_transformed['Item_Weight'].isnull()
@@ -84,12 +99,14 @@ class FeatureEngineeringPipeline:
             df_transformed['Outlet_Size'].isnull()
             ]['Outlet_Identifier'].unique())
 
+        log.info("Limpieza de faltantes en el tamaño de tiendas")
         # LIMPIEZA: de faltantes en el tamaño de las tiendas
         for outlet in outlets:
             df_transformed.loc[
                 df_transformed['Outlet_Identifier'] == outlet, 'Outlet_Size'
                 ] =  'Small'
 
+        log.info("Asignación de nueva categorías para 'Item_Fat_Content")
         # FEATURES ENGINEERING: asignación de nueva categorías para 'Item_Fat_Content'
         df_transformed.loc[
             df_transformed['Item_Type'] == 'Household', 'Item_Fat_Content'
@@ -107,6 +124,7 @@ class FeatureEngineeringPipeline:
             df_transformed['Item_Type'] == 'Fruits and Vegetables', 'Item_Fat_Content'
             ] = 'NA'
 
+        log.info("Creando categorías para 'Item_Type")
         # FEATURES ENGINEERING: creando categorías para 'Item_Type'
         df_transformed['Item_Type'] = df_transformed['Item_Type'].replace(
             {'Others': 'Non perishable',
@@ -124,19 +142,23 @@ class FeatureEngineeringPipeline:
             'Hard Drinks': 'Drinks',
             'Dairy': 'Drinks'})
 
+        log.info("Asignación de nueva categorías para Item_Fat_Content")
         # FEATURES ENGINEERING: asignación de nueva categorías para 'Item_Fat_Content'
         df_transformed.loc[
             df_transformed['Item_Type'] == 'Non perishable', 'Item_Fat_Content'
             ] = 'NA'
 
+        log.info("Codificando los niveles de precios de los productos")
         # FEATURES ENGINEERING: Codificando los niveles de precios de los productos
         df_transformed['Item_MRP'] = pd.qcut(
             df_transformed['Item_MRP'], 4, labels = [1, 2, 3, 4]
             )
 
+        log.info("Se eliminan columnas 'Item_Type' y 'Item_Fat_Content'")
         # FEATURES ENGINEERING: Se eliminan las columnas que no se utilizarán
         df_transformed = df_transformed.drop(columns=['Item_Type', 'Item_Fat_Content'])
 
+        log.info("Codificación de variables ordinales")
         # FEATURES ENGINEERING: Codificación de variables ordinales
         df_transformed['Outlet_Size'] = df_transformed['Outlet_Size'] \
             .replace({'High': 2, 'Medium': 1, 'Small': 0})
@@ -144,9 +166,11 @@ class FeatureEngineeringPipeline:
         df_transformed['Outlet_Location_Type'] = df_transformed['Outlet_Location_Type'] \
             .replace({'Tier 1': 2, 'Tier 2': 1, 'Tier 3': 0})
 
+        log.info("Codificación de variables nominales")
         # FEATURES ENGINEERING: Codificación de variables nominales
         df_transformed = pd.get_dummies(df_transformed, columns=['Outlet_Type'], dtype=int)
 
+        log.info("Eliminacion de columnas 'Item_Identifier' y 'Outlet_Identifier'")
         # FEATURES ENGINEERING: Eliminacion de columnas
         df_transformed = df_transformed.drop(columns=['Item_Identifier', 'Outlet_Identifier'])
 
@@ -158,10 +182,11 @@ class FeatureEngineeringPipeline:
             cols.append('Item_Outlet_Sales')
             df_transformed = df_transformed[cols]
 
+        log.info("Agregando columna de 'Item_Outlet_Sales' si no existe")
         # Agregar columna de Item_Outlet_Sales si no existe
         if 'Item_Outlet_Sales' not in df_transformed.columns:
             df_transformed['Item_Outlet_Sales'] = np.nan
-
+        log.info("Dataframe transformed")
         return df_transformed
 
     def write_prepared_data(self, transformed_dataframe: pd.DataFrame) -> None:
@@ -171,9 +196,11 @@ class FeatureEngineeringPipeline:
         
         :param transformed_dataframe: DataFrame de pandas transformado.
         """
-
-        transformed_dataframe.to_csv(self.output_path, index=False, sep=',')
-
+        try:
+            transformed_dataframe.to_csv(self.output_path, index=False, sep=',')
+            log.info("Dataframe transformado exportado en: %s",(self.output_path))
+        except (FileNotFoundError, PermissionError, pd.errors.DtypeWarning) as e_escritura:
+            log.info("An error occurred while writing to CSV: %s", str(e_escritura))
     def run(self):
         """
         Este metodo ejecuta los pasos para transformar los datos de entrada
@@ -185,7 +212,7 @@ class FeatureEngineeringPipeline:
         self.write_prepared_data(df_transformed)
 
 if __name__ == "__main__":
-
+    log.info("Script de feature engineering Iniciado")
     parser = argparse.ArgumentParser()
     parser.add_argument('modo', type=str, help='Modo de ejecución: train o test')
     args = parser.parse_args()
@@ -201,3 +228,4 @@ if __name__ == "__main__":
 
     FeatureEngineeringPipeline(input_path = IN_PATH,
                                 output_path = OUT_PATH).run()
+    log.info("Script de feature engineering completado")

@@ -9,9 +9,16 @@ FECHA: 17/7/2023
 # Imports
 import pickle as pkl
 import os
+import logging as log
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
+log.basicConfig(
+    filename='./train.log',
+    level=log.INFO,
+    filemode='w',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 
 class ModelTrainingPipeline:
     """
@@ -35,8 +42,13 @@ class ModelTrainingPipeline:
         :return: El DataFrame con los datos del DataLake.
         :rtype: pd.DataFrame
         """
-        df_bigmart = pd.read_csv(self.input_path,sep=",")
-
+        try:
+            log.info("Iniciando la lectura de datos desde %s", self.input_path)
+            df_bigmart = pd.read_csv(self.input_path,sep=",")
+            log.info("Datos leídos: Filas=%d, Columnas=%d",
+                    df_bigmart.shape[0], df_bigmart.shape[1])
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
+            log.info("Error %s al importar dataframe", e_lectura)
         return df_bigmart
 
     def model_training(self, df_bigmart: pd.DataFrame) -> pd.DataFrame:
@@ -49,14 +61,18 @@ class ModelTrainingPipeline:
         """
 
         model = LinearRegression()
-
+        log.info("Dividiendo datos en train y validacion")
         # División de dataset de entrenaimento y validación
         x_train = df_bigmart.drop(columns=['Item_Outlet_Sales'])
         y_train = df_bigmart['Item_Outlet_Sales']
 
-        # Entrenamiento del modelo
-        model_trained = model.fit(x_train,y_train)
-
+        log.info("Entrenando modelo Linear Regression")
+        try:
+            model_trained = model.fit(x_train, y_train)
+            log.info("Modelo entrenado con éxito")
+        except (ValueError, RuntimeError) as e_entrenamiento:
+            log.error("Un error ocurrio en el entrenamiento: %s", str(e_entrenamiento))
+            # Handle the exception here if needed
         return model_trained
 
     def model_dump(self, model_trained) -> None:
@@ -66,9 +82,14 @@ class ModelTrainingPipeline:
         :param model_trained: El modelo entrenado que se desea guardar.
         :type model_trained: None
         """
-        file_path = self.model_path
-        with open(file_path, 'wb') as f_pkl:
-            pkl.dump(model_trained, f_pkl)
+        log.info("Guardando modelo entrenado..")
+        try:
+            file_path = self.model_path
+            with open(file_path, 'wb') as f_pkl:
+                pkl.dump(model_trained, f_pkl)
+            log.info("Modelo entrenado guardado con éxito en: %s", file_path)
+        except (FileNotFoundError, PermissionError, pkl.PickleError) as e_guardado:
+            log.error("Un error ocurrió al guardar el modelo entrenado: %s", str(e_guardado))
 
     def run(self):
         """
@@ -82,6 +103,7 @@ class ModelTrainingPipeline:
 
 if __name__ == "__main__":
 
+    log.info("Script de entrenamiento iniciado")
     current_directory = os.path.dirname(os.path.abspath(__file__))
 
     in_path = os.path.join(current_directory,
@@ -92,4 +114,5 @@ if __name__ == "__main__":
 
     ModelTrainingPipeline(input_path = in_path,
                            model_path = mod_path).run()
+    log.info("Script de entrenamiento finalizado")
     

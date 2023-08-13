@@ -9,8 +9,15 @@ FECHA: 10/8/2023
 
 import pickle as pkl
 import os
+import logging as log
 import pandas as pd
 
+log.basicConfig(
+    filename='./predict.log',
+    level=log.INFO,
+    filemode='w',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S')
 class MakePredictionPipeline():
     """
     Clase que carga un modelo entrenado y realiza predicciones sobre 
@@ -30,8 +37,13 @@ class MakePredictionPipeline():
         :return: El DataFrame con los datos de entrada.
         """
 
-        data = pd.read_csv(self.input_path,sep=",")
-
+        try:
+            log.info("Iniciando la lectura de datos desde %s", self.input_path)
+            data = pd.read_csv(self.input_path,sep=",")
+            log.info("Datos leídos: Filas=%d, Columnas=%d",
+                    data.shape[0], data.shape[1])
+        except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
+            log.info("Error %s al importar dataframe", e_lectura)
         return data
 
     def load_model(self) -> None:
@@ -42,11 +54,18 @@ class MakePredictionPipeline():
         with open(self.model_path, 'rb') as model_file:
             self.model = pkl.load(model_file)
 
+        log.info("Cargando modelo entrenado..")
+        try:
+            with open(self.model_path, 'rb') as model_file:
+                self.model = pkl.load(model_file)
+            log.info("Modelo cargado")
+        except (FileNotFoundError, PermissionError, pkl.PickleError) as e_guardado:
+            log.error("Un error ocurrio al cargar el modelo: %s", str(e_guardado))
     def make_predictions(self, data: pd.DataFrame) -> pd.DataFrame:
         """
         Realiza predicciones sobre el conjunto de datos de entrada.
         """
-
+        log.info("Realizando predicciones..")
         new_data = data.drop(columns=['Item_Outlet_Sales'])
         new_data['Item_Outlet_Sales'] = self.model.predict(new_data)
 
@@ -56,7 +75,7 @@ class MakePredictionPipeline():
         """
         Escribe las predicciones en el directorio de salida.
         """
-
+        log.info("Guardando predicciones en el dataset")
         predicted_data.to_csv(self.output_path, index=False)
 
     def run(self):
@@ -71,6 +90,7 @@ class MakePredictionPipeline():
 
 if __name__ == "__main__":
 
+    log.info("Script de predicción iniciado")
     current_directory = os.path.dirname(os.path.abspath(__file__))
 
     in_path = os.path.join(current_directory,
@@ -88,4 +108,5 @@ if __name__ == "__main__":
     MakePredictionPipeline(input_path = in_path,
                             output_path = out_path,
                             model_path = mod_path).run()
+    log.info("Script de predicción finalizado")
   
