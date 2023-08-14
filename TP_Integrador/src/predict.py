@@ -15,9 +15,11 @@ import pandas as pd
 log.basicConfig(
     filename='./predict.log',
     level=log.INFO,
-    filemode='w',
+    filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    datefmt='%Y-%m-%d %H:%M:%S',
+    encoding='utf-8')
+
 class MakePredictionPipeline():
     """
     Clase que carga un modelo entrenado y realiza predicciones sobre 
@@ -43,7 +45,7 @@ class MakePredictionPipeline():
             log.info("Datos leídos: Filas=%d, Columnas=%d",
                     data.shape[0], data.shape[1])
         except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
-            log.info("Error %s al importar dataframe", e_lectura)
+            log.error("Error %s al importar dataframe", e_lectura)
         return data
 
     def load_model(self) -> None:
@@ -77,6 +79,7 @@ class MakePredictionPipeline():
         """
         log.info("Guardando predicciones en el dataset")
         predicted_data.to_csv(self.output_path, index=False)
+        log.info("Predicciones guardadas en: %s", self.output_path)
 
     def run(self):
         """
@@ -90,7 +93,7 @@ class MakePredictionPipeline():
 
 if __name__ == "__main__":
 
-    log.info("Script de predicción iniciado")
+    log.info("---- Script de predicción iniciado ----")
     current_directory = os.path.dirname(os.path.abspath(__file__))
 
     in_path = os.path.join(current_directory,
@@ -108,5 +111,5 @@ if __name__ == "__main__":
     MakePredictionPipeline(input_path = in_path,
                             output_path = out_path,
                             model_path = mod_path).run()
-    log.info("Script de predicción finalizado")
+    log.info("---- Script de predicción finalizado ----")
   

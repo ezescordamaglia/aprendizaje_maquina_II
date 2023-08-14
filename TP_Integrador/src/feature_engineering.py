@@ -16,11 +16,12 @@ import pandas as pd
 import numpy as np
 
 log.basicConfig(
-    filename='./feat_ing.log',
+    filename='./feature_engineering.log',
     level=log.INFO,
-    filemode='w',
+    filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    datefmt='%Y-%m-%d %H:%M:%S',
+    encoding='utf-8')
 
 class FeatureEngineeringPipeline:
     """
@@ -44,7 +45,7 @@ class FeatureEngineeringPipeline:
             pandas_df = pd.read_csv(self.input_path)
             log.info("Datos leídos: Filas=%d, Columnas=%d", pandas_df.shape[0], pandas_df.shape[1])
         except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
-            log.info("Error %s al importar dataframe", e_lectura)
+            log.error("Error %s al importar dataframe", e_lectura)
         return pandas_df
 
     def data_transformation(self, df_raw: pd.DataFrame) -> pd.DataFrame:
@@ -69,7 +70,7 @@ class FeatureEngineeringPipeline:
         df_transformed['Outlet_Establishment_Year'] = 2020 - \
             df_transformed['Outlet_Establishment_Year']
 
-        log.info("Unificando etiquetas para 'Item_Fat_Content")
+        log.info("Unificando etiquetas para 'Item_Fat_Content'")
         # LIMPIEZA: Unificando etiquetas para 'Item_Fat_Content'
         df_transformed['Item_Fat_Content'] = df_transformed['Item_Fat_Content'].replace(
             {'low fat':  'Low Fat', 'LF': 'Low Fat', 'reg': 'Regular'})
@@ -106,7 +107,7 @@ class FeatureEngineeringPipeline:
                 df_transformed['Outlet_Identifier'] == outlet, 'Outlet_Size'
                 ] =  'Small'
 
-        log.info("Asignación de nueva categorías para 'Item_Fat_Content")
+        log.info("Asignación de nueva categorías para 'Item_Fat_Content'")
         # FEATURES ENGINEERING: asignación de nueva categorías para 'Item_Fat_Content'
         df_transformed.loc[
             df_transformed['Item_Type'] == 'Household', 'Item_Fat_Content'
@@ -124,7 +125,7 @@ class FeatureEngineeringPipeline:
             df_transformed['Item_Type'] == 'Fruits and Vegetables', 'Item_Fat_Content'
             ] = 'NA'
 
-        log.info("Creando categorías para 'Item_Type")
+        log.info("Creando categorías para 'Item_Type'")
         # FEATURES ENGINEERING: creando categorías para 'Item_Type'
         df_transformed['Item_Type'] = df_transformed['Item_Type'].replace(
             {'Others': 'Non perishable',
@@ -142,7 +143,7 @@ class FeatureEngineeringPipeline:
             'Hard Drinks': 'Drinks',
             'Dairy': 'Drinks'})
 
-        log.info("Asignación de nueva categorías para Item_Fat_Content")
+        log.info("Asignación de nueva categorías para 'Item_Fat_Content'")
         # FEATURES ENGINEERING: asignación de nueva categorías para 'Item_Fat_Content'
         df_transformed.loc[
             df_transformed['Item_Type'] == 'Non perishable', 'Item_Fat_Content'
@@ -200,7 +201,7 @@ class FeatureEngineeringPipeline:
             transformed_dataframe.to_csv(self.output_path, index=False, sep=',')
             log.info("Dataframe transformado exportado en: %s",(self.output_path))
         except (FileNotFoundError, PermissionError, pd.errors.DtypeWarning) as e_escritura:
-            log.info("An error occurred while writing to CSV: %s", str(e_escritura))
+            log.error("Ocurrió un error al escribir el archivo CSV: %s", str(e_escritura))
     def run(self):
         """
         Este metodo ejecuta los pasos para transformar los datos de entrada
@@ -212,12 +213,14 @@ class FeatureEngineeringPipeline:
         self.write_prepared_data(df_transformed)
 
 if __name__ == "__main__":
-    log.info("Script de feature engineering Iniciado")
+    log.info("---- Script de feature engineering Iniciado ---")
     parser = argparse.ArgumentParser()
     parser.add_argument('modo', type=str, help='Modo de ejecución: train o test')
     args = parser.parse_args()
 
     modo = args.modo
+
+    log.info("Parámetro de ejecución: %s", modo)
 
     if modo == 'train':
         IN_PATH = r"..\data\Train_BigMart.csv"
@@ -228,4 +231,4 @@ if __name__ == "__main__":
 
     FeatureEngineeringPipeline(input_path = IN_PATH,
                                 output_path = OUT_PATH).run()
-    log.info("Script de feature engineering completado")
+    log.info("---- Script de feature engineering completado ----")

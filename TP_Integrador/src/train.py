@@ -16,9 +16,10 @@ from sklearn.linear_model import LinearRegression
 log.basicConfig(
     filename='./train.log',
     level=log.INFO,
-    filemode='w',
+    filemode='a',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S')
+    datefmt='%Y-%m-%d %H:%M:%S',
+    encoding='utf-8')
 
 class ModelTrainingPipeline:
     """
@@ -48,7 +49,7 @@ class ModelTrainingPipeline:
             log.info("Datos leídos: Filas=%d, Columnas=%d",
                     df_bigmart.shape[0], df_bigmart.shape[1])
         except (pd.errors.ParserError, pd.errors.EmptyDataError) as e_lectura:
-            log.info("Error %s al importar dataframe", e_lectura)
+            log.error("Error %s al importar dataframe", e_lectura)
         return df_bigmart
 
     def model_training(self, df_bigmart: pd.DataFrame) -> pd.DataFrame:
@@ -94,7 +95,6 @@ class ModelTrainingPipeline:
     def run(self):
         """
         Llama a los metodos.
- 
         """
 
         df_bigmart = self.read_data()
@@ -103,7 +103,7 @@ class ModelTrainingPipeline:
 
 if __name__ == "__main__":
 
-    log.info("Script de entrenamiento iniciado")
+    log.info("---- Script de entrenamiento iniciado ----")
     current_directory = os.path.dirname(os.path.abspath(__file__))
 
     in_path = os.path.join(current_directory,
@@ -114,5 +114,5 @@ if __name__ == "__main__":
 
     ModelTrainingPipeline(input_path = in_path,
                            model_path = mod_path).run()
-    log.info("Script de entrenamiento finalizado")
+    log.info("---- Script de entrenamiento finalizado ----")
     
